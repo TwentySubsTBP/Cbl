@@ -24,6 +24,8 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
+            'mover = my_tb3_world.mover:main',
+            'go_to_goal = my_tb3_world.go_to_goal:main',
         ],
     },
 )
