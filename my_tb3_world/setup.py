@@ -24,6 +24,8 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
+            'obstacle_info = my_tb3_world.obstacle_info:main',
+            'obstacle_info_sub = my_tb3_world.obstacle_info_subscriber:main',
         ],
     },
 )
