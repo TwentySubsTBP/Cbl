@@ -28,6 +28,9 @@ setup(
             'go_to_goal = my_tb3_world.go_to_goal:main',
             'obstacle_info = my_tb3_world.obstacle_info:main',
             'obstacle_info_sub = my_tb3_world.obstacle_info_subscriber:main',
+            'ph_sensor = my_tb3_world.ph_sensor:main',
+            'dt_supervisor = my_tb3_world.dt_supervisor:main',
+            'anomaly_zone_viz = my_tb3_world.anomaly_zone_viz:main',
         ],
     },
 )
