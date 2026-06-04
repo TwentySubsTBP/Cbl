@@ -45,7 +45,8 @@ class ObstacleInfo(Node):
         
         #Clean up the data by removing infinites and NaNs
         def clean_range(range):
-            return [r for r in range if r != float('inf') and not r != r]  # Remove inf and NaN
+            # keep only finite, positive readings (drops inf, NaN, and 0.0/invalid points)
+            return [r for r in range if math.isfinite(r) and r > 0.0]
         
         front_range = clean_range(front_range)
         left_range = clean_range(left_range)

@@ -32,5 +32,9 @@ def main(args=None):
     rclpy.spin(obstacle_info_subscriber)
     
     obstacle_info_subscriber.destroy_node()
-    
+
     rclpy.shutdown()
+
+
+if __name__ == '__main__':
+    main()
