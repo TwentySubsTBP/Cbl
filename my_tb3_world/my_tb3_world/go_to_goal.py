@@ -13,11 +13,13 @@ Note: this is a *local* controller - it steers straight at the goal and dodges
 obstacles reactively, so it can get stuck in front of walls. For global path
 planning around the arena, hand the goal to Nav2 instead (see test_nav.py).
 """
+import json
 import math
 
 import rclpy
 from rclpy.node import Node
-from rclpy.qos import QoSProfile, ReliabilityPolicy
+from rclpy.qos import QoSProfile, ReliabilityPolicy, DurabilityPolicy
+from std_msgs.msg import String
 from geometry_msgs.msg import TwistStamped
 from sensor_msgs.msg import LaserScan
 from nav_msgs.msg import Odometry
@@ -28,6 +30,8 @@ MAX_ANGULAR = 0.8        # rad/s turn speed cap
 HEADING_TOL = 0.15       # rad  turn in place until roughly facing the goal
 STOP_DIST = 0.4          # m    front obstacle distance that triggers avoidance
 FRONT_ARC_DEG = 25       # deg  half-width of the front cone we watch
+HAZARD_MARGIN = 0.4      # m    extra buffer kept around a DT hazard zone
+HAZARD_GAIN = 1.6        # -    repulsion strength when re-routing around a hazard
 
 
 def yaw_from_quat(q):
@@ -61,6 +65,13 @@ class GoToGoal(Node):
         self.create_subscription(Odometry, 'odom', self._on_odom, sensor_qos)
         self.create_subscription(LaserScan, 'scan', self._on_scan, sensor_qos)
 
+        # DT-only hazards (currents/storms) broadcast by hazard_manager. The
+        # topic is latched (transient_local), so match QoS to catch the last one.
+        self.hazard = None
+        hazard_qos = QoSProfile(depth=1)
+        hazard_qos.durability = DurabilityPolicy.TRANSIENT_LOCAL
+        self.create_subscription(String, 'hazard_zone', self._on_hazard, hazard_qos)
+
         self.reached = False
         self.create_timer(0.1, self._tick)   # 10 Hz control loop
         self.get_logger().info(
@@ -73,6 +84,36 @@ class GoToGoal(Node):
 
     def _on_scan(self, msg):
         self.scan = msg
+
+    def _on_hazard(self, msg):
+        try:
+            h = json.loads(msg.data)
+            self.hazard = h if h.get('active') else None
+        except (ValueError, TypeError):
+            self.hazard = None
+
+    def _hazard_repulsion(self, x, y):
+        """Steering push to route around an active DT hazard, 0 when clear.
+
+        Combines a radial term (push directly away) with a tangential 'swirl'
+        term (push sideways around the zone). The tangential part is what makes
+        the robot go *around* the hazard instead of stalling in front of it when
+        the hazard sits on the straight line to the goal (potential-field local
+        minimum). Returns (0, 0) outside the hazard's influence radius.
+        """
+        h = self.hazard
+        if not h:
+            return 0.0, 0.0
+        hx, hy = float(h.get('x', 0.0)), float(h.get('y', 0.0))
+        influence = float(h.get('radius', 0.5)) + HAZARD_MARGIN
+        ddx, ddy = x - hx, y - hy
+        d = math.hypot(ddx, ddy)
+        if d >= influence or d < 1e-6:
+            return 0.0, 0.0
+        strength = HAZARD_GAIN * (influence - d) / influence
+        ux, uy = ddx / d, ddy / d           # radial unit (away from hazard)
+        tx, ty = -uy, ux                    # tangential unit (90 deg CCW: circle around)
+        return (ux + 0.9 * tx) * strength, (uy + 0.9 * ty) * strength
 
     def _front_min(self):
         s = self.scan
@@ -113,7 +154,13 @@ class GoToGoal(Node):
             self._publish(0.0, MAX_ANGULAR)
             return
 
-        heading_err = norm_angle(math.atan2(dy, dx) - yaw)
+        # Blend goal attraction with repulsion from any active DT hazard, so the
+        # robot re-routes around currents/storms that have no physical collision
+        # (environmental interaction: a twin-only hazard changes the real path).
+        gx, gy = dx / dist, dy / dist             # unit vector toward the goal
+        rx, ry = self._hazard_repulsion(x, y)     # (0, 0) when clear of hazards
+        desired = math.atan2(gy + ry, gx + rx)
+        heading_err = norm_angle(desired - yaw)
         if abs(heading_err) > HEADING_TOL:
             # Not facing the goal yet: turn in place toward it.
             self._publish(0.0, self._clamp(1.5 * heading_err, -MAX_ANGULAR, MAX_ANGULAR))

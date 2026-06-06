@@ -31,6 +31,7 @@ setup(
             'ph_sensor = my_tb3_world.ph_sensor:main',
             'dt_supervisor = my_tb3_world.dt_supervisor:main',
             'anomaly_zone_viz = my_tb3_world.anomaly_zone_viz:main',
+            'hazard_manager = my_tb3_world.hazard_manager:main',
         ],
     },
 )
