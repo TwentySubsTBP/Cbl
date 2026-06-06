@@ -20,7 +20,7 @@ import rclpy
 from rclpy.node import Node
 from rclpy.qos import QoSProfile, ReliabilityPolicy, DurabilityPolicy
 from std_msgs.msg import String
-from geometry_msgs.msg import TwistStamped
+from geometry_msgs.msg import TwistStamped, PoseStamped
 from sensor_msgs.msg import LaserScan
 from nav_msgs.msg import Odometry
 
@@ -75,6 +75,13 @@ class GoToGoal(Node):
         hazard_qos.durability = DurabilityPolicy.TRANSIENT_LOCAL
         self.create_subscription(String, 'hazard_zone', self._on_hazard, hazard_qos)
 
+        # Accept dynamic goals via /goal_pose (from sector_nav patrol or
+        # dt_supervisor's investigate-the-leak command). Latched to match those
+        # publishers. The goal_x/goal_y params above are just the initial goal.
+        goal_qos = QoSProfile(depth=1)
+        goal_qos.durability = DurabilityPolicy.TRANSIENT_LOCAL
+        self.create_subscription(PoseStamped, 'goal_pose', self._on_goal_pose, goal_qos)
+
         self.reached = False
         self.create_timer(0.1, self._tick)   # 10 Hz control loop
         self.get_logger().info(
@@ -94,6 +101,13 @@ class GoToGoal(Node):
             self.hazard = h if h.get('active') else None
         except (ValueError, TypeError):
             self.hazard = None
+
+    def _on_goal_pose(self, msg):
+        gx, gy = msg.pose.position.x, msg.pose.position.y
+        if (gx, gy) != (self.goal_x, self.goal_y):
+            self.goal_x, self.goal_y = gx, gy
+            self.reached = False        # re-engage for the new target
+            self.get_logger().info('new goal via /goal_pose: (%.2f, %.2f)' % (gx, gy))
 
     def _hazard_repulsion(self, x, y):
         """Steering push to route around an active DT hazard, 0 when clear.
