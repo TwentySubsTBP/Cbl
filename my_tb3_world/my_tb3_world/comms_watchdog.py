@@ -46,7 +46,10 @@ class CommsWatchdog(Node):
         self._lost = False        # currently in COMMS LOST state?
 
         self.create_subscription(String, self.heartbeat_topic, self._on_heartbeat, 10)
-        self.cmd_pub = self.create_publisher(TwistStamped, 'cmd_vel', 10)
+        # Halt topic is configurable so the integration launch routes it to the
+        # cmd_mux highest-priority input (cmd_vel_halt); defaults to /cmd_vel.
+        cmd_topic = str(self.declare_parameter('cmd_vel_topic', 'cmd_vel').value)
+        self.cmd_pub = self.create_publisher(TwistStamped, cmd_topic, 10)
         self.alive_pub = self.create_publisher(Bool, 'twin_alive', 10)
 
         self.create_timer(1.0 / self.check_rate, self._tick)

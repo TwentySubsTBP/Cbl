@@ -55,7 +55,10 @@ class GoToGoal(Node):
         self.goal_x = float(self.declare_parameter('goal_x', 1.0).value)
         self.goal_y = float(self.declare_parameter('goal_y', 0.0).value)
 
-        self.pub = self.create_publisher(TwistStamped, 'cmd_vel', 10)
+        # Output topic is configurable so the integration launch can route this
+        # through the cmd_mux (e.g. cmd_vel_nav); defaults to /cmd_vel standalone.
+        cmd_topic = str(self.declare_parameter('cmd_vel_topic', 'cmd_vel').value)
+        self.pub = self.create_publisher(TwistStamped, cmd_topic, 10)
 
         # /odom and /scan are published BEST_EFFORT by the gz bridge.
         sensor_qos = QoSProfile(depth=10)

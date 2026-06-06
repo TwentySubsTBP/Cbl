@@ -79,7 +79,10 @@ class DtSupervisor(Node):
         goal_qos = QoSProfile(depth=1)
         goal_qos.durability = DurabilityPolicy.TRANSIENT_LOCAL
         self.goal_pub = self.create_publisher(PoseStamped, 'goal_pose', goal_qos)
-        self.cmd_pub = self.create_publisher(TwistStamped, 'cmd_vel', 10)
+        # Override topic is configurable so the integration launch routes it to
+        # the cmd_mux safety input (cmd_vel_override); defaults to /cmd_vel.
+        cmd_topic = str(self.declare_parameter('cmd_vel_topic', 'cmd_vel').value)
+        self.cmd_pub = self.create_publisher(TwistStamped, cmd_topic, 10)
 
         self.create_timer(1.0 / self.rate_hz, self._tick)
         self.get_logger().info(

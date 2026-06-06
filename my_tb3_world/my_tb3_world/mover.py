@@ -27,7 +27,10 @@ FRONT_ARC_DEG = 30       # deg   half-width of the front cone we watch
 class Mover(Node):
     def __init__(self):
         super().__init__('mover')
-        self.pub = self.create_publisher(TwistStamped, 'cmd_vel', 10)
+        # Output topic is configurable so the integration launch can route this
+        # through the cmd_mux (e.g. cmd_vel_nav); defaults to /cmd_vel standalone.
+        cmd_topic = str(self.declare_parameter('cmd_vel_topic', 'cmd_vel').value)
+        self.pub = self.create_publisher(TwistStamped, cmd_topic, 10)
 
         # LiDAR publishes BEST_EFFORT; a RELIABLE subscriber receives nothing.
         scan_qos = QoSProfile(depth=10)
