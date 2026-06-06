@@ -51,6 +51,7 @@ def generate_launch_description():
         world,
 
         n('ph_sensor'),
+        n('obstacle_info'),
         n('dt_supervisor', {'cmd_vel_topic': 'cmd_vel_override'}),
         n('comms_watchdog', {'cmd_vel_topic': 'cmd_vel_halt'}),
         n('go_to_goal', {
