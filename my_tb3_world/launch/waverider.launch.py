@@ -59,6 +59,7 @@ def generate_launch_description():
             'goal_y': ParameterValue(LaunchConfiguration('goal_y'), value_type=float),
         }),
         n('anomaly_zone_viz'),
+        n('anomaly_alert'),
         n('hazard_manager'),
         n('cmd_mux'),
     ])
