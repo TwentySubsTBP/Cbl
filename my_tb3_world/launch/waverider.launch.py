@@ -60,6 +60,7 @@ def generate_launch_description():
         }),
         n('anomaly_zone_viz'),
         n('anomaly_alert'),
+        n('latency_logger'),
         n('hazard_manager'),
         n('cmd_mux'),
     ])

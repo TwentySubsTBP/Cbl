@@ -35,6 +35,7 @@ setup(
             'comms_watchdog = my_tb3_world.comms_watchdog:main',
             'cmd_mux = my_tb3_world.cmd_mux:main',
             'anomaly_alert = my_tb3_world.anomaly_alert:main',
+            'latency_logger = my_tb3_world.latency_logger:main',
         ],
     },
 )

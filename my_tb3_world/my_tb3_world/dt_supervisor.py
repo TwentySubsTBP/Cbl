@@ -184,6 +184,9 @@ class DtSupervisor(Node):
             'ph': self.water.get('ph') if self.water else None,
             'front_m': round(front, 2) if math.isfinite(front) else None,
             'stamp': self._now(),
+            # Echo the source reading's timestamp so latency_logger can measure
+            # the full robot->twin->response round-trip (NFR1).
+            'src_stamp': self.water.get('stamp') if self.water else None,
         }
         out = String()
         out.data = json.dumps(status)
