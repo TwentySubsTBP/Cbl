@@ -45,7 +45,11 @@ Wait ~40s for Gazebo to open.
 **T2 (new host WSL terminal) — enter the container and start all twin nodes:**
 ```bash
 docker exec -it turtlebot3_container bash
-cd /ws && source install/setup.bash && export TURTLEBOT3_MODEL=burger
+cd /ws
+source /opt/ros/jazzy/setup.bash
+source /opt/turtlebot3_ws/install/setup.bash
+source install/setup.bash
+export TURTLEBOT3_MODEL=burger
 # check odom is alive (must print a number):
 ros2 topic echo --once --qos-reliability best_effort /odom
 # start the whole system (hazard placed at x=0.8 for Act 2):
@@ -55,7 +59,11 @@ ros2 launch my_tb3_world waverider.launch.py start_world:=false hazard_x:=0.8 ha
 **T3 (new host WSL terminal) — your control/trigger terminal:**
 ```bash
 docker exec -it turtlebot3_container bash
-cd /ws && source install/setup.bash && export TURTLEBOT3_MODEL=burger
+cd /ws
+source /opt/ros/jazzy/setup.bash
+source /opt/turtlebot3_ws/install/setup.bash
+source install/setup.bash
+export TURTLEBOT3_MODEL=burger
 ```
 Run the acts below from **T3**.
 
@@ -100,16 +108,57 @@ ros2 run my_tb3_world dt_supervisor --ros-args -p cmd_vel_topic:=cmd_vel_overrid
 
 ---
 
+## Autonomous patrol (optional)
+
+Instead of sending manual goals, you can let the robot patrol the map
+autonomously using sector_nav. Run in **T3** (after setup + start):
+```bash
+ros2 run my_tb3_world sector_nav
+```
+The robot will patrol a 2x2 grid in snake order, looping forever. You can
+trigger anomalies from **T4** while it patrols.
+
+> **Important:** If you ran Act 3 before this, `twin_alive` will be `False` and
+> the robot will refuse to move. Restart the supervisor first:
+> ```bash
+> ros2 run my_tb3_world dt_supervisor --ros-args -p cmd_vel_topic:=cmd_vel_override
+> ```
+
+---
+
 ## Record evidence (optional, run in a spare T4 before the acts)
 ```bash
 docker exec -it turtlebot3_container bash
-cd /ws && source install/setup.bash
+cd /ws
+source /opt/ros/jazzy/setup.bash
+source /opt/turtlebot3_ws/install/setup.bash
+source install/setup.bash
 ros2 bag record /water_quality /mode /alerts /latency_ms /hazard_zone /sector /obstacle_info /twin_alive /cmd_vel /odom /scan
 ```
 
 ## If something breaks
-- `/odom` empty / nothing happens → Gazebo stalled: restart **T1** (`new_world.launch.py`).
-- `docker: command not found` → Docker Desktop crashed: reopen the app and retry.
-- Robot won't move → check one navigator is running and `ros2 topic info /cmd_vel` shows **1 publisher** (cmd_mux).
+
+- **`ros2: command not found`** → You forgot to source ROS. Run this in every new terminal inside the container:
+  ```bash
+  cd /ws
+  source /opt/ros/jazzy/setup.bash
+  source /opt/turtlebot3_ws/install/setup.bash
+  source install/setup.bash
+  export TURTLEBOT3_MODEL=burger
+  ```
+- **`git clone` fails with password prompt** → GitHub no longer accepts passwords. Use a [Personal Access Token](https://github.com/settings/tokens) (repo scope) as the password, or use `gh auth login` + `gh repo clone`.
+- **Robot won't move / cmd_vel is all zeros** → Check these in order:
+  1. `ros2 topic echo --once --field data /twin_alive` — if `False`, the supervisor was killed (Act 3). Restart it:
+     ```bash
+     ros2 run my_tb3_world dt_supervisor --ros-args -p cmd_vel_topic:=cmd_vel_override
+     ```
+  2. `ros2 topic echo --once --field data /mode` — if `ALERT`, reset the pH anomaly first:
+     ```bash
+     ros2 topic pub --once /ph_anomaly std_msgs/Bool "{data: false}"
+     ```
+  3. `ros2 topic info /cmd_vel` — should show **1 publisher** (cmd_mux).
+- **`/odom` empty / nothing happens** → Gazebo stalled: restart **T1** (`new_world.launch.py`).
+- **`docker: command not found`** → Docker Desktop crashed: reopen the app and retry.
+- **Act 2: robot doesn't move toward goal** → Make sure mode is not ALERT and twin_alive is True before sending the goal.
 
 Full explanation: see `docs/DEMO_TESTING.md`.
