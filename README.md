@@ -1,6 +1,8 @@
 # Cbl — WaveRider digital twin
 
-## ▶ To run the demo: see **[RUN.md](RUN.md)** (copy-paste, top to bottom)
+## ▶ To run the demo:
+- **Lab PC (Ubuntu, no Docker):** see **[LAB_RUN.md](LAB_RUN.md)** — step-by-step, foolproof
+- **Windows + Docker:** see **[RUN.md](RUN.md)** — copy-paste, top to bottom
 - 3 graded acts (state sync / hazard re-route / comms halt) with exact commands.
 - Full status of every feature: [docs/STATUS.md](docs/STATUS.md)
 - Lab-session prep (real robot): [docs/LAB_RUNBOOK.md](docs/LAB_RUNBOOK.md)
