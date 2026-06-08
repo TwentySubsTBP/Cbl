@@ -23,12 +23,57 @@ class ObstacleInfo(Node):
         )
         
         self.publisher = self.create_publisher(
-            String, 
-            'obstacle_info', 
+            String,
+            'obstacle_info',
             qos_profile
         )
-        
-    
+
+    def _detect_unexpected_objects(self, scan_data):
+        """Flag discrete unexpected objects vs the known arena walls (FR1.2).
+
+        The 'illegal fishing boat' case: a wall is one large, continuous LiDAR
+        return, whereas an unexpected object is a SMALL, NEAR cluster of points
+        that is isolated by range discontinuities from whatever is behind it.
+        We segment the scan at range jumps and keep clusters that are small
+        (narrow angular span) and entirely close (foreground). Pose-independent,
+        so it works while the robot drives.
+        """
+        ranges = scan_data.ranges
+        n = len(ranges)
+        if n == 0:
+            return []
+        JUMP = 0.4              # m   range discontinuity marking an object edge
+        OBJ_MAX_DIST = 2.0      # m   only near returns count as candidate objects
+        MIN_PTS = 3             #     ignore single-point noise
+        MAX_PTS = max(6, n // 12)  # objects subtend a narrow span; walls are wide
+
+        objects = []
+        cluster = []            # list of (index, range)
+        prev = None
+
+        def flush(cl):
+            if not (MIN_PTS <= len(cl) <= MAX_PTS):
+                return
+            rs = [r for _, r in cl]
+            if max(rs) >= OBJ_MAX_DIST:     # whole cluster must be foreground
+                return
+            mid = cl[len(cl) // 2][0]
+            ang = math.degrees(scan_data.angle_min + mid * scan_data.angle_increment)
+            objects.append({'angle_deg': round(ang, 1),
+                            'dist': round(min(rs), 2),
+                            'width_pts': len(cl)})
+
+        for i in range(n):
+            r = ranges[i]
+            if not math.isfinite(r) or r <= 0.0:
+                flush(cluster); cluster = []; prev = None; continue
+            if prev is not None and abs(r - prev) > JUMP:
+                flush(cluster); cluster = []
+            cluster.append((i, r))
+            prev = r
+        flush(cluster)
+        return objects
+
     def scan_callback(self, scan_data):
         num_ranges = len(scan_data.ranges)
         if num_ranges == 0:
@@ -63,22 +108,33 @@ class ObstacleInfo(Node):
         range_threshold = 0.5  # Define a threshold distance for obstacle detection
         obstacle = min_front < range_threshold or min_left < range_threshold or min_back < range_threshold or min_right < range_threshold
         
+        # Flag discrete unexpected objects (the 'illegal boat') vs known walls.
+        unexpected = self._detect_unexpected_objects(scan_data)
+
         # Output info, in json cause its easiest to parse
         output = {
             'obstacle': obstacle,
             'min_front': round(min_front, 2) if min_front != float('inf') else 'clear',
             'min_left': round(min_left, 2) if min_left != float('inf') else 'clear',
             'min_back': round(min_back, 2) if min_back != float('inf') else 'clear',
-            'min_right': round(min_right, 2) if min_right != float('inf') else 'clear'
+            'min_right': round(min_right, 2) if min_right != float('inf') else 'clear',
+            'unexpected_count': len(unexpected),
+            'unexpected_objects': unexpected,
         }
 
         string_output = String()
         string_output.data = json.dumps(output)
 
         # Publish the interpreted obstacle information
-        
+
         self.publisher.publish(string_output)
-        self.get_logger().info(f"Front: {output['min_front']}m | Obstacle Nearby: {output['obstacle']}")
+        if unexpected:
+            nearest = min(unexpected, key=lambda o: o['dist'])
+            self.get_logger().warn(
+                f"UNEXPECTED OBJECT x{len(unexpected)} (nearest {nearest['dist']}m "
+                f"@ {nearest['angle_deg']} deg) -- possible illegal boat")
+        else:
+            self.get_logger().info(f"Front: {output['min_front']}m | Obstacle Nearby: {output['obstacle']}")
 
 def main(args=None):
     rclpy.init(args=args)
