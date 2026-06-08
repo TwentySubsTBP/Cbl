@@ -102,9 +102,14 @@ ros2 topic echo --once --field data /twin_alive   # -> True
 pkill -9 -f lib/my_tb3_world/dt_supervisor
 # within ~5s: robot STOPS, and:
 ros2 topic echo --once --field data /twin_alive   # -> False
-# bring the twin back:
+# IMPORTANT: bring the twin back BEFORE doing anything else (Acts, patrol, etc.)
+# The robot will NOT move while twin_alive is False.
 ros2 run my_tb3_world dt_supervisor --ros-args -p cmd_vel_topic:=cmd_vel_override
 ```
+
+> **After Act 3:** Always restart the supervisor above before continuing.
+> Run it in a **separate terminal** (e.g. T3) so it stays alive in the
+> background while you use other terminals for patrol or further testing.
 
 ---
 
