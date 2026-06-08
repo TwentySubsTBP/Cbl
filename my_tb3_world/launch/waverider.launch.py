@@ -47,6 +47,8 @@ def generate_launch_description():
                               description='Also launch the Gazebo world'),
         DeclareLaunchArgument('goal_x', default_value='1.5'),
         DeclareLaunchArgument('goal_y', default_value='0.0'),
+        DeclareLaunchArgument('hazard_x', default_value='0.8'),
+        DeclareLaunchArgument('hazard_y', default_value='0.0'),
 
         world,
 
@@ -62,6 +64,9 @@ def generate_launch_description():
         n('anomaly_zone_viz'),
         n('anomaly_alert'),
         n('latency_logger'),
-        n('hazard_manager'),
+        n('hazard_manager', {
+            'hazard_x': ParameterValue(LaunchConfiguration('hazard_x'), value_type=float),
+            'hazard_y': ParameterValue(LaunchConfiguration('hazard_y'), value_type=float),
+        }),
         n('cmd_mux'),
     ])
