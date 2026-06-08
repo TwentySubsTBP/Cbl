@@ -95,7 +95,8 @@ ros2 topic pub --once /ph_anomaly std_msgs/Bool "{data: false}"
 ros2 topic pub --once /spawn_hazard std_msgs/Bool "{data: true}"
 
 # 3) send the robot to a goal BEYOND the hazard:
-ros2 topic pub --once /goal_pose geometry_msgs/PoseStamped \
+#    (/goal_pose is transient_local -> the -w 1 + --qos-durability flags are REQUIRED)
+ros2 topic pub --once -w 1 --qos-durability transient_local /goal_pose geometry_msgs/PoseStamped \
   "{header: {frame_id: 'odom'}, pose: {position: {x: 1.8, y: 0.0}, orientation: {w: 1.0}}}"
 ```
 **Watch:**
@@ -116,8 +117,8 @@ ros2 topic pub --once /spawn_hazard std_msgs/Bool "{data: false}"   # blue zone 
 
 **T3:**
 ```bash
-# make the robot drive first:
-ros2 topic pub --once /goal_pose geometry_msgs/PoseStamped \
+# make the robot drive first (transient_local QoS flags REQUIRED):
+ros2 topic pub --once -w 1 --qos-durability transient_local /goal_pose geometry_msgs/PoseStamped \
   "{header: {frame_id: 'odom'}, pose: {position: {x: 2.0, y: 0.0}, orientation: {w: 1.0}}}"
 ros2 topic echo --field data /twin_alive &     # watch: True while twin is up
 

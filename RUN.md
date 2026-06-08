@@ -78,16 +78,17 @@ ros2 topic pub --once /ph_anomaly std_msgs/Bool "{data: false}"
 ros2 topic pub --once /ph_anomaly std_msgs/Bool "{data: false}"
 # spawn the twin-only hazard (at x=0.8):
 ros2 topic pub --once /spawn_hazard std_msgs/Bool "{data: true}"
-# send the robot to a goal BEYOND the hazard -> it re-routes around it:
-ros2 topic pub --once /goal_pose geometry_msgs/PoseStamped "{header: {frame_id: 'odom'}, pose: {position: {x: 1.8, y: 0.0}, orientation: {w: 1.0}}}"
+# send the robot to a goal BEYOND the hazard -> it re-routes around it.
+# NOTE: /goal_pose uses transient_local QoS, so the flags below are REQUIRED:
+ros2 topic pub --once -w 1 --qos-durability transient_local /goal_pose geometry_msgs/PoseStamped "{header: {frame_id: 'odom'}, pose: {position: {x: 1.8, y: 0.0}, orientation: {w: 1.0}}}"
 # reset:
 ros2 topic pub --once /spawn_hazard std_msgs/Bool "{data: false}"
 ```
 
 ## ACT 3 — Comms safety halt (lose the twin -> robot stops in 5s)
 ```bash
-# make the robot drive:
-ros2 topic pub --once /goal_pose geometry_msgs/PoseStamped "{header: {frame_id: 'odom'}, pose: {position: {x: 2.0, y: 0.0}, orientation: {w: 1.0}}}"
+# make the robot drive (transient_local QoS flags are REQUIRED):
+ros2 topic pub --once -w 1 --qos-durability transient_local /goal_pose geometry_msgs/PoseStamped "{header: {frame_id: 'odom'}, pose: {position: {x: 2.0, y: 0.0}, orientation: {w: 1.0}}}"
 ros2 topic echo --once --field data /twin_alive   # -> True
 # cut the twin (kill the heartbeat):
 pkill -9 -f lib/my_tb3_world/dt_supervisor
