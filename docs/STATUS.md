@@ -70,6 +70,14 @@ ros2 launch my_tb3_world waverider.launch.py start_world:=false   # world alread
   arbitrated writer of /cmd_vel (HALT > OVERRIDE > NAV + fail-safe stop), fixing
   the multi-publisher contention found in the dry-run.
 
+**14. Sync monitor (state-sync error, Week-6 deck slides 14/15/39) — (done)**
+- the course defines the gap between the entity's actual state and the twin's
+  last-known state as THE sync error a DT must measure and log
+- → `sync_monitor.py`; publishes /sync_error_m (Float64, metres) and
+  /sync_status (JSON: sync_ok, error, state age, both poses), evidence log
+  /tmp/waverider_sync.log. Verified live: 0.0002 m in sync; killing ph_sensor
+  → TWIN DESYNC warning within 2 s; restart → SYNC OK recovery.
+
 ## Remaining (cross-cutting, from the WhatsApp list)
 
 - **12.** Locate / merge the team's `twin_safety_node` / `tb3_safety_stop` — still

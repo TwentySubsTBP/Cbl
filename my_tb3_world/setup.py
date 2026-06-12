@@ -37,6 +37,7 @@ setup(
             'anomaly_alert = my_tb3_world.anomaly_alert:main',
             'latency_logger = my_tb3_world.latency_logger:main',
             'sector_nav = my_tb3_world.sector_nav:main',
+            'sync_monitor = my_tb3_world.sync_monitor:main',
         ],
     },
 )

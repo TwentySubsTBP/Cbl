@@ -148,7 +148,7 @@ pkill -9 -f lib/my_tb3_world/dt_supervisor
 
 In a spare terminal, before running the acts:
 ```bash
-ros2 bag record /water_quality /mode /alerts /latency_ms /hazard_zone /sector /obstacle_info /twin_alive /cmd_vel /odom /scan
+ros2 bag record /water_quality /mode /alerts /latency_ms /sync_status /sync_error_m /hazard_zone /sector /obstacle_info /twin_alive /cmd_vel /odom /scan
 ```
 This bag is your NFR1/FR4 evidence and a backup demo.
 

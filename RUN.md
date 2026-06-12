@@ -149,7 +149,7 @@ cd /ws
 source /opt/ros/jazzy/setup.bash
 source /opt/turtlebot3_ws/install/setup.bash
 source install/setup.bash
-ros2 bag record /water_quality /mode /alerts /latency_ms /hazard_zone /sector /obstacle_info /twin_alive /cmd_vel /odom /scan
+ros2 bag record /water_quality /mode /alerts /latency_ms /sync_status /sync_error_m /hazard_zone /sector /obstacle_info /twin_alive /cmd_vel /odom /scan
 ```
 
 ## If something breaks
