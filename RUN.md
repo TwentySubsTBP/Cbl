@@ -71,27 +71,38 @@ Run the acts below from **T3**.
 
 ## ACT 1 — State sync (pH leak)   [watch Gazebo: RED zone]
 ```bash
-# trigger the leak:
+# 1) open the alert listener FIRST (background). /alerts is edge-triggered —
+#    one message per event — so subscribing AFTER the trigger misses it:
+ros2 topic echo --once /alerts &
+sleep 1
+# 2) trigger the leak:
 ros2 topic pub --once /ph_anomaly std_msgs/Bool "{data: true}"
-# evidence:
-ros2 topic echo --once /alerts                 # -> {"state":"RAISED", "ph":6.0, ...}
+# the background echo now prints -> {"state":"RAISED", "ph":6.0, ...}
+# 3) more evidence (/mode publishes continuously, safe to run any time):
 ros2 topic echo --once --field data /mode      # -> "mode":"ALERT"
-# reset:
+# 4) reset:
 ros2 topic pub --once /ph_anomaly std_msgs/Bool "{data: false}"
 ```
 
 ## ACT 2 — Environmental interaction (hazard re-route)   [watch Gazebo: BLUE zone, robot curves around]
 ```bash
-# make sure no leak is active:
+# 0) make sure no leak is active:
 ros2 topic pub --once /ph_anomaly std_msgs/Bool "{data: false}"
-# spawn the twin-only hazard (at x=0.8):
+# 1) PARK THE ROBOT AT HOME FIRST (no hazard yet). The robot auto-drives to
+#    (1.5, 0) right after startup, which is already PAST the hazard spot —
+#    sending it to 1.8 from there shows no detour. So bring it home first.
+#    NOTE: /goal_pose uses transient_local QoS, the flags are REQUIRED:
+ros2 topic pub --once -w 1 --qos-durability transient_local /goal_pose geometry_msgs/PoseStamped "{header: {frame_id: 'odom'}, pose: {position: {x: 0.0, y: 0.0}, orientation: {w: 1.0}}}"
+#    ... WAIT until the robot stops at (0, 0).
+# 2) spawn the twin-only hazard (at x=0.8, now between robot and goal):
 ros2 topic pub --once /spawn_hazard std_msgs/Bool "{data: true}"
-# send the robot to a goal BEYOND the hazard -> it re-routes around it.
-# NOTE: /goal_pose uses transient_local QoS, so the flags below are REQUIRED:
+# 3) send the robot to a goal BEYOND the hazard -> watch it curve around:
 ros2 topic pub --once -w 1 --qos-durability transient_local /goal_pose geometry_msgs/PoseStamped "{header: {frame_id: 'odom'}, pose: {position: {x: 1.8, y: 0.0}, orientation: {w: 1.0}}}"
-# reset:
+# 4) reset (after it arrives):
 ros2 topic pub --once /spawn_hazard std_msgs/Bool "{data: false}"
 ```
+> Re-sending the SAME goal twice does nothing (go_to_goal ignores duplicate
+> coordinates). To repeat the pass, alternate goals: home (0,0) -> far (1.8,0).
 
 ## ACT 3 — Comms safety halt (lose the twin -> robot stops in 5s)
 ```bash

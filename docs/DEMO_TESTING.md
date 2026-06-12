@@ -91,11 +91,18 @@ collision), yet the robot re-routes around it = the twin changes the robot's pat
 # 1) put the leak away first if Act 1 is still on:
 ros2 topic pub --once /ph_anomaly std_msgs/Bool "{data: false}"
 
-# 2) spawn the hazard (it is at x=0.8, between start and the goal):
+# 2) park the robot at home FIRST (no hazard yet). The robot auto-drives to
+#    (1.5, 0) right after startup, which is already past the hazard spot, so
+#    a goal at 1.8 from there would show no detour:
+#    (/goal_pose is transient_local -> the -w 1 + --qos-durability flags are REQUIRED)
+ros2 topic pub --once -w 1 --qos-durability transient_local /goal_pose geometry_msgs/PoseStamped \
+  "{header: {frame_id: 'odom'}, pose: {position: {x: 0.0, y: 0.0}, orientation: {w: 1.0}}}"
+#    ... wait until the robot stops at (0, 0).
+
+# 3) spawn the hazard (at x=0.8, now between the robot and the goal):
 ros2 topic pub --once /spawn_hazard std_msgs/Bool "{data: true}"
 
-# 3) send the robot to a goal BEYOND the hazard:
-#    (/goal_pose is transient_local -> the -w 1 + --qos-durability flags are REQUIRED)
+# 4) send the robot to a goal BEYOND the hazard:
 ros2 topic pub --once -w 1 --qos-durability transient_local /goal_pose geometry_msgs/PoseStamped \
   "{header: {frame_id: 'odom'}, pose: {position: {x: 1.8, y: 0.0}, orientation: {w: 1.0}}}"
 ```
@@ -107,7 +114,8 @@ ros2 topic pub --once -w 1 --qos-durability transient_local /goal_pose geometry_
 ```bash
 ros2 topic pub --once /spawn_hazard std_msgs/Bool "{data: false}"   # blue zone disappears
 ```
-*Tip:* if the robot already passed x=0.8, re-send the goal (step 3) to make it drive past again.
+*Tip:* re-sending the SAME goal does nothing (go_to_goal ignores duplicate
+coordinates) — to drive the pass again, alternate goals: home (0,0) then far (1.8,0).
 
 ---
 
